@@ -22,17 +22,30 @@ router.post('/', async (req, res) => {
     const assignment = processCVRPResults(cvrpResult, staff, orders);
 
     // Update DB: assign orders and update staff routes
-    for (const [staffId, data] of Object.entries(assignment.assignments)) {
-      await Staff.findByIdAndUpdate(staffId, {
-        assignedOrders: data.assignedOrders,
-        currentRoute: data.route,
-        available: false,
-        isAtWarehouse: false
-      });
-      await Order.updateMany(
-        { _id: { $in: data.assignedOrders } },
-        { assignedTo: staffId, status: 'assigned' }
-      );
+    const assignedStaffIds = Object.keys(assignment.assignments);
+    for (const staffMember of staff) {
+      const staffId = staffMember._id.toString();
+      const data = assignment.assignments[staffId];
+      if (data && data.assignedOrders.length > 0) {
+        await Staff.findByIdAndUpdate(staffId, {
+          assignedOrders: data.assignedOrders,
+          currentRoute: data.route,
+          available: false,
+          isAtWarehouse: false
+        });
+        await Order.updateMany(
+          { _id: { $in: data.assignedOrders } },
+          { assignedTo: staffId, status: 'assigned' }
+        );
+      } else {
+        // No orders assigned: mark available and clear assignments
+        await Staff.findByIdAndUpdate(staffId, {
+          assignedOrders: [],
+          currentRoute: [],
+          available: true,
+          isAtWarehouse: true
+        });
+      }
     }
 
     res.json({
@@ -49,4 +62,4 @@ router.post('/', async (req, res) => {
   }
 });
 
-export default router; 
+export default router;

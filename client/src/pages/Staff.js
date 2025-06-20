@@ -43,6 +43,31 @@ const Staff = () => {
     }
   }, [staffId]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (navigator.geolocation && staffId) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            try {
+              await staffAPI.updateLocation(
+                staffId,
+                position.coords.latitude,
+                position.coords.longitude
+              );
+              await fetchStaffData();
+            } catch (error) {
+              // Optionally handle error
+            }
+          },
+          (error) => {
+            // Optionally handle geolocation error
+          }
+        );
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [staffId]);
+
   const fetchStaffData = async () => {
     setLoading(true);
     try {
@@ -82,31 +107,6 @@ const Staff = () => {
       toast.success('Order delivered successfully');
     } catch (error) {
       toast.error('Failed to deliver order');
-    }
-  };
-
-  const updateLocation = async () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          try {
-            await staffAPI.updateLocation(
-              staffId,
-              position.coords.latitude,
-              position.coords.longitude
-            );
-            await fetchStaffData();
-            toast.success('Location updated');
-          } catch (error) {
-            toast.error('Failed to update location');
-          }
-        },
-        (error) => {
-          toast.error('Failed to get location');
-        }
-      );
-    } else {
-      toast.error('Geolocation not supported');
     }
   };
 
@@ -254,13 +254,6 @@ const Staff = () => {
                 className="btn btn-outline flex items-center gap-2"
               >
                 LogOut
-              </button>
-              <button
-                onClick={updateLocation}
-                className="btn btn-outline flex items-center gap-2"
-              >
-                <Navigation className="w-4 h-4" />
-                Update Location
               </button>
             </div>
           </div>
@@ -463,4 +456,4 @@ const Staff = () => {
   );
 };
 
-export default Staff; 
+export default Staff;
